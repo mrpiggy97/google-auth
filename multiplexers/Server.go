@@ -3,9 +3,11 @@ package multiplexers
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/mrpiggy97/google-auth/middleware"
 	"golang.org/x/time/rate"
 )
 
@@ -18,47 +20,43 @@ type Server struct {
 	AllowedAppHost     string
 }
 
-func (serverInstance *Server) Throttle(writer http.ResponseWriter, req *http.Request) {
-	//this function will thottle, add cors headers with the allowed methods the app
-	//will handle and the cross site origin allowed, and
+func (serverInstance *Server) ServeHTTP(writer http.ResponseWriter, req *http.Request) {
+	//this function will thottle and add cors headers
 	if !limiter.Allow() {
-
 		var messageCode int = http.StatusTooManyRequests
 		var message string = http.StatusText(messageCode)
 		http.Error(writer, message, messageCode)
+
 	} else if serverInstance.AllowedAppHost != req.Host {
+
 		fmt.Println("wrong host")
 		var messageCode int = http.StatusForbidden
 		var message string = http.StatusText(messageCode)
 		http.Error(writer, message, messageCode)
+
 	} else {
+
 		var allowedMethods []string = serverInstance.AllowedMethods[0:]
 		var allowedMethodString string = strings.Join(allowedMethods, ",")
 		writer.Header().Set("Access-Control-Allow-Methods", allowedMethodString)
 		writer.Header().Set("Access-Control-Allow-Origin", serverInstance.AllowedCrossOrigin)
-		var currentHost string = fmt.Sprintf("this is the host being used %v", req.Host)
-		fmt.Println(currentHost)
+		req = middleware.ApplyMiddleware(req)
 		serverInstance.Router.ServeHTTP(writer, req)
 	}
-}
-
-func (serverInstance *Server) ServeAndThrottle() http.HandlerFunc {
-	//return a handler
-	return http.HandlerFunc(serverInstance.Throttle)
 }
 
 func NewServer() *Server {
 	var router *httprouter.Router = httprouter.New()
 	var allowedMethods [5]string = [5]string{"GET"}
-	var allowedOrigin string = "http://localhost:3000"
-	var allowedHost string = "localhost:8080"
-	var muxServer Server = Server{
+	var allowedCrossOrigin string = os.Getenv("ALLOWED_CROSS_ORIGIN")
+	var allowedAppHost string = os.Getenv("ALLOWED_APP_HOST")
+
+	var muxServer *Server = &Server{
 		Router:             router,
 		AllowedMethods:     allowedMethods,
-		AllowedCrossOrigin: allowedOrigin,
-		AllowedAppHost:     allowedHost,
+		AllowedCrossOrigin: allowedCrossOrigin,
+		AllowedAppHost:     allowedAppHost,
 	}
 
-	var muxServerPointer *Server = &muxServer
-	return muxServerPointer
+	return muxServer
 }
