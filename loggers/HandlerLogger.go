@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func Logger(handlerName string, request *http.Request) {
+func HandlerLogger(handlerName string, request *http.Request) {
 	var logDate time.Time = time.Now()
 	var origin string = request.Header.Get("Origin")
 	var message string = fmt.Sprintf(
