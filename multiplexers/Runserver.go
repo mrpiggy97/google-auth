@@ -15,8 +15,8 @@ func Runserver(port int) {
 	var message2 string = fmt.Sprintf("server listening at address %v", address)
 	fmt.Println(message1)
 	fmt.Println(message2)
-
 	var basicServer *Server = NewServer()
-	basicServer.Router.GET("/", handlers.GoogleHandler)
-	http.ListenAndServe(address, basicServer.ServeAndThrottle())
+	basicServer.Router.POST("/test-json", handlers.GoogleHandler)
+	basicServer.Router.GET("/", handlers.HomeHandler)
+	http.ListenAndServe(address, basicServer)
 }
